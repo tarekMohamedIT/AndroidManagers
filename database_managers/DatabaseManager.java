@@ -1,4 +1,4 @@
-package core;
+package database_managers;
 
 import android.content.Context;
 import android.database.Cursor;
