@@ -1,4 +1,4 @@
-package core;
+package database_managers;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -15,7 +15,7 @@ import model_classes.Alarm;
  * Created by tarek on 6/4/17.
  */
 
-public class AlarmManager extends DatabaseManager {
+public class AlarmDBManager extends DatabaseManager {
 
     private ArrayList<Alarm> alarmsList;
     private Alarm activeAlarm;
@@ -28,13 +28,19 @@ public class AlarmManager extends DatabaseManager {
     private OnAlarmsListUpdated onAlarmsListUpdated;
 
     /**
-     * A constructor to the AlarmManager class
+     * A constructor to the AlarmDBManager class
      *
      * @param context The context of operation(Activity or fragment)
      */
-    public AlarmManager(Context context) {
+    public AlarmDBManager(Context context) {
         super(context, "alarm12398462123");
+
         createAlarmsTable();
+        try {
+            updateAlarmsList();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -83,26 +89,23 @@ public class AlarmManager extends DatabaseManager {
         if (alarmsList == null) alarmsList = new ArrayList<>();
         else alarmsList.clear();
 
+        DateTime nowTime = DateTime.getNow();
         while (cursor.moveToNext()) {
-            alarmsList.add(new Alarm(cursor.getString(0)
+            Alarm alarm = new Alarm(cursor.getString(0)
                     , cursor.getString(1)
                     , new DateTime(cursor.getString(2), DateTime.DEFAULT_DATE_TIME_24_HOUR)
                     , new DateTime(cursor.getString(3), DateTime.DEFAULT_DATE_TIME_24_HOUR)
-            ));
+            );
+            alarmsList.add(alarm);
+            if (activeAlarm == null && nowTime.compareTo(alarm.getTimeFrom()) <= 0) activeAlarm = alarm;
+            else if (activeAlarm != null && nowTime.compareTo(alarm.getTimeFrom()) <= 0 && activeAlarm.getTimeFrom().compareTo(alarm.getTimeFrom()) >= 0) activeAlarm = alarm;
         }
 
         Collections.sort(alarmsList);
 
-        if (alarmsList.size() > 0) {
-            activeAlarm = alarmsList.get(0);
+        if (activeAlarm != null)
             preferences.edit().putString(alarmKey, activeAlarm.getKey()).apply();
-        }
-
-        else {
-            activeAlarm = null;
-            preferences.edit().putString(alarmKey, "").apply();
-        }
-
+        
         if (onAlarmsListUpdated != null) onAlarmsListUpdated.onAlarmsListUpdate(alarmsList);
     }
 
